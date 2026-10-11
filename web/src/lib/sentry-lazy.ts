@@ -1,5 +1,5 @@
 import type * as SentryModule from "@/lib/sentry-client";
-import { scrubEvent } from "@/lib/sentry-scrub";
+import { scrubEvent, scrubTransaction, sharedReportSafeSampler } from "@/lib/sentry-scrub";
 import { isInjectedEvalError } from "@/lib/sentry-noise";
 
 // The Sentry browser SDK is ~150KB gzip and nothing above the fold needs it, so it is
@@ -27,7 +27,8 @@ export function startSentry(dsn: string, onReady?: () => void): void {
       dsn,
       environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
       release: process.env.VERCEL_GIT_COMMIT_SHA,
-      tracesSampleRate: 0.1,
+      tracesSampler: sharedReportSafeSampler(0.1),
+      beforeSendTransaction: (event) => scrubTransaction(event),
       beforeSend: (event) => (isInjectedEvalError(event) ? null : scrubEvent(event)),
     });
     sentry = Sentry;
