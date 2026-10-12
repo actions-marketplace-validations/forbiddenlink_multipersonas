@@ -26,14 +26,31 @@ function expectStatus(res, allowed) {
   }
 }
 
-await check("health reports database and queue ok", async () => {
+// Public /api/health returns 200/503 from the real checks (cached ~30s) with no details.
+// The detailed body sits behind the cron bearer, so it is checked only when SMOKE_CRON_SECRET
+// is set (never printed).
+await check("health status is ok", async () => {
   const res = await fetchWithTimeout(`${baseUrl}/api/health`, { cache: "no-store" });
   expectStatus(res, [200]);
   const json = await res.json();
   if (json.status !== "ok") throw new Error(`health status was ${json.status}`);
-  if (json.checks?.database !== "ok") throw new Error("database health was not ok");
-  if (json.checks?.queue !== "ok") throw new Error("queue health was not ok");
 });
+
+if (process.env.SMOKE_CRON_SECRET) {
+  await check("health reports database and queue ok", async () => {
+    const res = await fetchWithTimeout(`${baseUrl}/api/health`, {
+      cache: "no-store",
+      headers: { authorization: `Bearer ${process.env.SMOKE_CRON_SECRET}` },
+    });
+    expectStatus(res, [200]);
+    const json = await res.json();
+    if (json.status !== "ok") throw new Error(`health status was ${json.status}`);
+    if (json.checks?.database !== "ok") throw new Error("database health was not ok");
+    if (json.checks?.queue !== "ok") throw new Error("queue health was not ok");
+  });
+} else {
+  console.log("SKIP detailed health (SMOKE_CRON_SECRET not set)");
+}
 
 for (const path of ["/", "/grade", "/for-agencies", "/pricing", "/docs", "/auth/login"]) {
   await check(`GET ${path}`, async () => {
