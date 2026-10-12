@@ -384,6 +384,7 @@ export type Database = {
           id: string
           plan: string
           stripe_customer_id: string | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -395,6 +396,7 @@ export type Database = {
           id: string
           plan?: string
           stripe_customer_id?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -406,6 +408,7 @@ export type Database = {
           id?: string
           plan?: string
           stripe_customer_id?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -776,7 +779,7 @@ export type Database = {
         Returns: { status: string; job_id: string | null; token: string | null }[]
       }
       enqueue_due_project_scan_schedules: {
-        Args: { p_limit?: number; p_daily_cap?: number; p_caller_cap?: number; p_calls_per_persona?: number }
+        Args: { p_limit?: number; p_daily_cap?: number; p_caller_cap?: number; p_calls_per_persona?: number; p_trial_caller_cap?: number }
         Returns: {
           job_id: string
           schedule_id: string
