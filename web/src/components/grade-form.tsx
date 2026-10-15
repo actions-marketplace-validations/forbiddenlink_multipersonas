@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Button } from "@/components/ui/button";
@@ -257,7 +258,9 @@ export function GradeForm() {
           <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--redline)]">
             <p>
               <span aria-hidden="true" className="font-mono">■ </span>
-              The human check did not finish. If it keeps failing, turn off script blockers for this page.
+              The human check did not finish. Ad blockers and some privacy settings stop it from
+              loading. Turn them off for this page and retry, or{" "}
+              <Link href="/sample-report" className="text-link">read the sample report</Link> instead.
             </p>
             <button
               type="button"
