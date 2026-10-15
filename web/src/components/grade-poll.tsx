@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Shown only while a grade is still running, so it stays out of the result page's first load.
+const GradeEmailCapture = dynamic(
+  () => import("@/components/grade-email-field").then((m) => m.GradeEmailCapture),
+  { ssr: false },
+);
 
 /** Stop auto-refresh after this long. The worker's in-process cap is 5 minutes
  * and the reaper fires at 10; ten minutes of watching is past both, and matches
@@ -63,6 +70,7 @@ export function GradePoll({
           </Link>
           .
         </p>
+        <GradeEmailCapture token={token} />
       </div>
     );
   }
@@ -112,6 +120,7 @@ export function GradePoll({
           Up to 10 public pages are scanned. This page keeps its address, so you can leave
           and come back to the result.
         </p>
+        <GradeEmailCapture token={token} />
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-4">
           <p className="font-mono text-sm text-muted-foreground">
             {paused ? "Auto-refresh paused" : "Updates automatically"}, or{" "}
