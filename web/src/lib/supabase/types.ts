@@ -376,11 +376,14 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_grace_ends_at: string | null
+          access_grace_anchors: Json | null
           agency_name: string | null
           avatar_url: string | null
           created_at: string
           email: string
           full_name: string | null
+          grace_fallback_plan: string | null
           id: string
           plan: string
           stripe_customer_id: string | null
@@ -388,11 +391,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_grace_ends_at?: string | null
+          access_grace_anchors?: Json | null
           agency_name?: string | null
           avatar_url?: string | null
           created_at?: string
           email: string
           full_name?: string | null
+          grace_fallback_plan?: string | null
           id: string
           plan?: string
           stripe_customer_id?: string | null
@@ -400,11 +406,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_grace_ends_at?: string | null
+          access_grace_anchors?: Json | null
           agency_name?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
+          grace_fallback_plan?: string | null
           id?: string
           plan?: string
           stripe_customer_id?: string | null

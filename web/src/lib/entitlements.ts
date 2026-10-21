@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { planAfterGrace } from "@/lib/plans";
 
 export type Plan = "free" | "pro" | "team";
 
@@ -34,6 +35,31 @@ export function planUpgradeSummary(): string {
 }
 
 /**
+ * Read a profile row with an expired past_due grace window applied to `plan`
+ * (planAfterGrace). Selects the grace column alongside `columns` (which must include
+ * `plan`); before its migration (Postgres 42703 / PostgREST PGRST204) it falls back to
+ * the plain columns. Callers get `plan` already effective, so no reader can forget it.
+ */
+export async function readProfileWithEffectivePlan<Row extends { plan: string }>(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  columns: string,
+): Promise<{ data: Row | null; error: { code?: string; message?: string } | null }> {
+  const read = (cols: string) => supabase.from("profiles").select(cols).eq("id", userId).single();
+  let { data, error } = await read(`${columns},access_grace_ends_at,grace_fallback_plan,access_grace_anchors`);
+  if (error && (error.code === "42703" || error.code === "PGRST204")) ({ data, error } = await read(columns));
+  if (error || !data) return { data: null, error: error ?? { message: "no row" } };
+  const row = data as unknown as Row & { access_grace_ends_at?: string | null; grace_fallback_plan?: string | null; access_grace_anchors?: unknown };
+  const { access_grace_ends_at, grace_fallback_plan, access_grace_anchors, ...rest } = row;
+  return { data: { ...(rest as unknown as Row), plan: planAfterGrace(row.plan, access_grace_ends_at, grace_fallback_plan, Date.now(), access_grace_anchors) }, error: null };
+}
+
+async function readStoredPlan(supabase: SupabaseClient<Database>, userId: string): Promise<string> {
+  const { data } = await readProfileWithEffectivePlan<{ plan: string }>(supabase, userId, "plan");
+  return data?.plan ?? "free";
+}
+
+/**
  * Read the caller's plan from profiles via the RLS-scoped server client. Anonymous callers,
  * a missing row, or any read error resolve to "free" so the gate fails closed (a pro user
  * briefly seeing the paywall is safe; the inverse would leak the paid layer). Never uses the
@@ -44,13 +70,8 @@ export async function getSessionPlan(
   userId: string | null,
 ): Promise<Plan> {
   if (!userId) return "free";
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", userId)
-    .single();
-  if (error || !data) return "free";
-  return planAllowsPersonas(data.plan) ? (data.plan as Plan) : "free";
+  const stored = await readStoredPlan(supabase, userId);
+  return planAllowsPersonas(stored) ? (stored as Plan) : "free";
 }
 
 /**
@@ -88,11 +109,6 @@ export async function getExactPlan(
   userId: string | null,
 ): Promise<Plan> {
   if (!userId) return "free";
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", userId)
-    .single();
-  if (error || !data) return "free";
-  return data.plan === "pro" || data.plan === "team" ? data.plan : "free";
+  const stored = await readStoredPlan(supabase, userId);
+  return stored === "pro" || stored === "team" ? stored : "free";
 }
