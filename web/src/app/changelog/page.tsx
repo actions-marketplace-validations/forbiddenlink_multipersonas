@@ -2,10 +2,13 @@ import { Fragment } from "react";
 import type { Metadata } from "next";
 import { MarketingShell } from "@/components/marketing-shell";
 import { ContentArticle } from "@/components/dossier/content-article";
-import { CHANGELOG, CHANGELOG_PR_BASE, type ChangelogEntry } from "@/lib/changelog";
+import { CHANGELOG, CHANGELOG_PR_BASE, changelogIds, type ChangelogEntry } from "@/lib/changelog";
 
 export const metadata: Metadata = {
-  alternates: { canonical: "/changelog" },
+  alternates: {
+    canonical: "/changelog",
+    types: { "application/rss+xml": [{ url: "/changelog/feed.xml", title: "Personaudit changelog" }] },
+  },
   title: "Changelog",
   description: "User-visible changes to Personaudit, by month, taken from merged pull requests.",
 };
@@ -52,6 +55,8 @@ function groupByMonth(entries: ChangelogEntry[]): { id: string; label: string; i
 
 export default function ChangelogPage() {
   const months = groupByMonth(CHANGELOG);
+  const allIds = changelogIds(CHANGELOG);
+  const ids = new Map(CHANGELOG.map((e, i) => [e, allIds[i]]));
 
   return (
     <MarketingShell narrow={false}>
@@ -64,7 +69,10 @@ export default function ChangelogPage() {
       >
         <p>
           User-visible changes, newest first, taken from merged pull requests. Dependency
-          updates and internal changes are left out. Each entry links to its pull request.
+          updates and internal changes are left out. Each entry links to its pull request.{" "}
+          <a href="/changelog/feed.xml" className="text-link">
+            RSS feed
+          </a>
         </p>
 
         {months.map((g) => (
@@ -72,7 +80,7 @@ export default function ChangelogPage() {
             <h2 id={g.id}>{g.label}</h2>
             <ul>
               {g.items.map((e) => (
-                <li key={`${e.pr}-${e.date}`}>
+                <li key={ids.get(e)} id={ids.get(e)} className="scroll-mt-24">
                   <time dateTime={e.date}>{formatDate(e.date)}</time>: {e.text}{" "}
                   <a
                     href={`${CHANGELOG_PR_BASE}/${e.pr}`}
@@ -81,6 +89,9 @@ export default function ChangelogPage() {
                     className="text-link"
                   >
                     #{e.pr}
+                  </a>{" "}
+                  <a href={`#${ids.get(e)}`} className="text-link">
+                    Link<span className="sr-only"> to this entry (#{e.pr})</span>
                   </a>
                 </li>
               ))}
