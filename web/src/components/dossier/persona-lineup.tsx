@@ -10,6 +10,7 @@ import {
   type ExampleNode,
 } from "@/lib/example-page";
 import { SeverityChip } from "@/components/forensic/severity-chip";
+import { describeDevice } from "@/lib/persona-outcomes";
 
 type ViewKind = "normal" | "keyboard" | "outline" | "narrow";
 
@@ -39,16 +40,15 @@ const VIEW: Record<(typeof SAMPLE_PANE_PERSONAS)[number], { kind: ViewKind; labe
 
 /** What the persona actually does differently, from its own definition. */
 function modalityLabel(id: PersonaId): string {
-  const p = prebuiltPersonas[id]!;
-  const input = p.inputModality === "keyboard" ? "keyboard" : p.isMobile ? "touch" : "pointer";
-  const net = p.connectionSpeed === "fast" ? null : p.connectionSpeed;
-  return [`${p.viewport.width} x ${p.viewport.height}`, input, net].filter(Boolean).join(" · ");
+  return describeDevice(prebuiltPersonas[id]!);
 }
 
-function FocusBadge({ n, fault = false }: { n: number; fault?: boolean }) {
+function FocusBadge({ n, fault = false, beside = false }: { n: number; fault?: boolean; beside?: boolean }) {
+  // `beside` puts the badge after a text target instead of on its corner, so it never covers a letter.
+  const place = beside ? "top-1/2 -right-6 -translate-y-1/2" : "-top-2 -right-1";
   return (
     <span
-      className={`absolute -top-2 -right-1 z-10 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background px-1 font-mono text-[11px] font-bold leading-none tabular-nums ${
+      className={`absolute ${place} z-10 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-background px-1 font-mono text-[11px] font-bold leading-none tabular-nums ${
         fault ? "bg-[var(--redline)] text-background" : "bg-foreground text-background"
       }`}
     >
@@ -61,7 +61,8 @@ function FocusBadge({ n, fault = false }: { n: number; fault?: boolean }) {
 function ExampleForm({ badges = false }: { badges?: boolean }) {
   const order = tabOrder();
   const byId = (id: string): ExampleNode => EXAMPLE_PAGE.nodes.find((n) => n.id === id)!;
-  const badge = (id: string) => (badges ? <FocusBadge n={order.get(id)!} fault={id === EXAMPLE_FAULT_ID} /> : null);
+  const badge = (id: string, beside = false) =>
+    badges ? <FocusBadge n={order.get(id)!} fault={id === EXAMPLE_FAULT_ID} beside={beside} /> : null;
   const focused = (id: string) => (badges && order.get(id) === 1 ? "outline-[3px] outline-offset-2 outline-[var(--ring)]" : "");
 
   const field = (id: string) => {
@@ -92,7 +93,7 @@ function ExampleForm({ badges = false }: { badges?: boolean }) {
       </div>
       <div className="flex items-center justify-between pt-0.5">
         <span className="relative text-[12px] font-bold underline decoration-2 underline-offset-2">
-          Cancel{badge("cancel")}
+          Cancel{badge("cancel", true)}
         </span>
         <span className="relative bg-primary px-3 py-0.5 text-[12px] font-bold text-primary-foreground">
           Continue{badge("continue")}
@@ -196,7 +197,7 @@ export function PersonaLineup({ className = "" }: { className?: string }) {
                 <p className="border-b-2 border-foreground px-3 py-1 font-mono text-xs font-bold uppercase tracking-[0.08em]">
                   {view.label}
                 </p>
-                <div className="h-[17.5rem] overflow-hidden bg-muted p-2" aria-hidden="true">
+                <div className="min-h-[17.5rem] flex-1 overflow-hidden bg-muted p-2" aria-hidden="true">
                   <View kind={view.kind} />
                 </div>
                 <p className="sr-only">{view.alt}</p>
